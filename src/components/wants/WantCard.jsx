@@ -1,61 +1,92 @@
-// src/components/wants/WantCard.jsx
 import dayjs from 'dayjs'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import WantStatusBadge from './WantStatusBadge'
-import WantTimer from './WantTimer'
+import { useCountdown } from '../../hooks/useCountdown'; // Import the hook
+
 
 const WantCard = ({ want, onPress, onBuy, onCure }) => {
-  const isUnlocked = dayjs().isAfter(dayjs(want.wait_until))
-  const isWaiting = want.status === 'waiting'
+  // 👇 PUT IT HERE - inside the component, before the return
+  const { timeLeft, isUnlocked } = useCountdown(want.wait_until)
+  
+  // Calculate percentage for progress bar
+  const totalWait = dayjs(want.wait_until).diff(dayjs(want.created_at))
+  const elapsed = dayjs().diff(dayjs(want.created_at))
+  const percentage = Math.min(100, Math.round((elapsed / totalWait) * 100))
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
-
-      {/* Header */}
+      
+      {/* Header with name and status */}
       <View style={styles.header}>
         <Text style={styles.itemName}>{want.item_name}</Text>
-        <WantStatusBadge status={want.status} />
+        <View style={[
+          styles.statusBadge, 
+          isUnlocked ? styles.unlockedBadge : styles.waitingBadge
+        ]}>
+          <Text style={styles.statusText}>
+            {isUnlocked ? '🟢 Unlocked' : '🟡 Waiting'}
+          </Text>
+        </View>
       </View>
 
-      {/* Price + Category */}
+      {/* Price and category */}
       <View style={styles.meta}>
         <Text style={styles.price}>${want.price.toFixed(2)}</Text>
         <Text style={styles.category}>{want.category}</Text>
       </View>
 
-      {/* Reason */}
-      {want.reason_i_want_it && (
-        <Text style={styles.reason}>"{want.reason_i_want_it}"</Text>
-      )}
+      {/* The Countdown Section - REPLACE your old timer with this */}
+      <View style={[
+        styles.timerContainer,
+        isUnlocked && styles.unlockedContainer
+      ]}>
+        
+        {/* Progress Bar */}
+        <View style={styles.progressBackground}>
+          <View style={[
+            styles.progressFill,
+            { width: `${percentage}%` },
+            isUnlocked && styles.progressFillComplete
+          ]} />
+        </View>
 
-      {/* Timer — only show if waiting */}
-      {isWaiting && (
-        <WantTimer waitUntil={want.wait_until} />
-      )}
+        {/* 👇 THIS IS WHERE THE SNIPPET GOES IN THE JSX */}
+        <Text style={[
+          styles.timerText,
+          isUnlocked && styles.unlockedText
+        ]}>
+          {isUnlocked 
+            ? '🔓 Unlocked! Decide now.' 
+            : `${timeLeft?.days || 0}d ${timeLeft?.hours || 0}h ${timeLeft?.minutes || 0}m ${timeLeft?.seconds || 0}s remaining`
+          }
+        </Text>
+        
+        {!isUnlocked && (
+          <Text style={styles.percentageText}>{percentage}% complete</Text>
+        )}
+      </View>
 
       {/* Action Buttons */}
-      {isWaiting && (
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={[
-              styles.buyButton,
-              !isUnlocked && styles.buyButtonLocked
-            ]}
-            onPress={() => onBuy(want)}
-          >
-            <Text style={styles.buyText}>
-              {isUnlocked ? '🛒 I Bought It' : '🔒 Still Waiting...'}
-            </Text>
-          </TouchableOpacity>
+      <View style={styles.actions}>
+        <TouchableOpacity
+          style={[
+            styles.buyButton,
+            !isUnlocked && styles.buyButtonLocked
+          ]}
+          onPress={() => onBuy(want)}
+          disabled={!isUnlocked}  // Disable if still locked
+        >
+          <Text style={styles.buyText}>
+            {isUnlocked ? '🛒 Buy It' : '🔒 Locked'}
+          </Text>
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.cureButton}
-            onPress={() => onCure(want)}
-          >
-            <Text style={styles.cureText}>✅ I'm Cured</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+        <TouchableOpacity
+          style={styles.cureButton}
+          onPress={() => onCure(want)}
+        >
+          <Text style={styles.cureText}>✅ I'm Cured</Text>
+        </TouchableOpacity>
+      </View>
 
     </TouchableOpacity>
   )
@@ -85,11 +116,26 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     flex: 1,
   },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  waitingBadge: {
+    backgroundColor: '#FFF3E0',
+  },
+  unlockedBadge: {
+    backgroundColor: '#E8F5E9',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
   meta: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   price: {
     fontSize: 20,
@@ -104,16 +150,47 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
   },
-  reason: {
-    fontSize: 13,
-    color: '#666',
-    fontStyle: 'italic',
+  timerContainer: {
+    backgroundColor: '#FFF3E0',
+    padding: 12,
+    borderRadius: 10,
     marginBottom: 12,
+  },
+  unlockedContainer: {
+    backgroundColor: '#E8F5E9',
+  },
+  progressBackground: {
+    height: 6,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 3,
+    marginBottom: 8,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#FF5722',
+    borderRadius: 3,
+  },
+  progressFillComplete: {
+    backgroundColor: '#4CAF50',
+  },
+  timerText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FF6F00',
+    textAlign: 'center',
+  },
+  unlockedText: {
+    color: '#2E7D32',
+  },
+  percentageText: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 4,
   },
   actions: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 12,
   },
   buyButton: {
     flex: 1,
@@ -123,7 +200,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buyButtonLocked: {
-    backgroundColor: '#ccc',
+    backgroundColor: '#CCCCCC',
   },
   buyText: {
     color: '#fff',
