@@ -1,84 +1,107 @@
-// src/components/wants/WantCard.jsx
-import dayjs from 'dayjs';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { haptics } from '../../utils/haptics';
-import WantStatusBadge from './WantStatusBadge';
-import WantTimer from './WantTimer';
-
+import dayjs from 'dayjs'
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { useCountdown } from '../../hooks/useCountdown'
+import { haptics } from '../../utils/haptics'
 
 const WantCard = ({ want, onPress, onBuy, onCure }) => {
-  const isUnlocked = dayjs().isAfter(dayjs(want.wait_until))
-  const isWaiting = want.status === 'waiting'
+  const { timeLeft, isUnlocked } = useCountdown(want.wait_until)
+  const totalWait = dayjs(want.wait_until).diff(dayjs(want.created_at))
+  const elapsed = dayjs().diff(dayjs(want.created_at))
+  const percentage =
+    totalWait > 0
+      ? Math.min(100, Math.max(0, Math.round((elapsed / totalWait) * 100)))
+      : 100
 
-  // 👇 NEW: Handler functions with haptics
   const handleCardPress = () => {
-    haptics.light()  // Light tap when opening card details
+    haptics.light()
     if (onPress) onPress(want)
   }
 
   const handleBuyPress = () => {
-    if (isUnlocked) {
-      haptics.medium()  // Medium tap for a confirmed buy action
-    } else {
-      haptics.warning()  // Warning vibration for trying to buy while locked
+    if (!isUnlocked) {
+      haptics.warning()
+      return
     }
-    onBuy(want)
+
+    haptics.medium()
+    if (onBuy) onBuy(want)
   }
 
   const handleCurePress = () => {
-    haptics.success()  // Success vibration for curing (saving money!)
-    onCure(want)
+    haptics.success()
+    if (onCure) onCure(want)
   }
 
   return (
     <TouchableOpacity style={styles.card} onPress={handleCardPress}>
-
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.itemName}>{want.item_name}</Text>
-        <WantStatusBadge status={want.status} />
+        <View
+          style={[
+            styles.statusBadge,
+            isUnlocked ? styles.unlockedBadge : styles.waitingBadge,
+          ]}
+        >
+          <Text style={styles.statusText}>
+            {isUnlocked ? 'Unlocked' : 'Waiting'}
+          </Text>
+        </View>
       </View>
 
-      {/* Price + Category */}
       <View style={styles.meta}>
-        <Text style={styles.price}>${want.price.toFixed(2)}</Text>
+        <Text style={styles.price}>${Number(want.price || 0).toFixed(2)}</Text>
         <Text style={styles.category}>{want.category}</Text>
       </View>
 
-      {/* Reason */}
       {want.reason_i_want_it && (
         <Text style={styles.reason}>"{want.reason_i_want_it}"</Text>
       )}
 
-      {/* Timer — only show if waiting */}
-      {isWaiting && (
-        <WantTimer waitUntil={want.wait_until} />
-      )}
-
-      {/* Action Buttons */}
-      {isWaiting && (
-        <View style={styles.actions}>
-          <TouchableOpacity
+      <View
+        style={[
+          styles.timerContainer,
+          isUnlocked && styles.unlockedContainer,
+        ]}
+      >
+        <View style={styles.progressBackground}>
+          <View
             style={[
-              styles.buyButton,
-              !isUnlocked && styles.buyButtonLocked
+              styles.progressFill,
+              { width: `${percentage}%` },
+              isUnlocked && styles.progressFillComplete,
             ]}
-            onPress={handleBuyPress}  // 👈 Updated
-          >
-            <Text style={styles.buyText}>
-              {isUnlocked ? '🛒 I Bought It' : '🔒 Still Waiting...'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.cureButton}
-            onPress={handleCurePress}  // 👈 Updated
-          >
-            <Text style={styles.cureText}>✅ I'm Cured</Text>
-          </TouchableOpacity>
+          />
         </View>
-      )}
 
+        <Text style={[styles.timerText, isUnlocked && styles.unlockedText]}>
+          {isUnlocked
+            ? 'Unlocked! Decide now.'
+            : `${timeLeft?.days || 0}d ${timeLeft?.hours || 0}h ${timeLeft?.minutes || 0}m ${timeLeft?.seconds || 0}s remaining`}
+        </Text>
+
+        {!isUnlocked && (
+          <Text style={styles.percentageText}>{percentage}% complete</Text>
+        )}
+      </View>
+
+      <View style={styles.actions}>
+        <TouchableOpacity
+          style={[
+            styles.buyButton,
+            !isUnlocked && styles.buyButtonLocked,
+          ]}
+          onPress={handleBuyPress}
+          disabled={!isUnlocked}
+        >
+          <Text style={styles.buyText}>
+            {isUnlocked ? 'Buy It' : 'Locked'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.cureButton} onPress={handleCurePress}>
+          <Text style={styles.cureText}>I'm Cured</Text>
+        </TouchableOpacity>
+      </View>
     </TouchableOpacity>
   )
 }
@@ -107,11 +130,26 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     flex: 1,
   },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  waitingBadge: {
+    backgroundColor: '#FFF3E0',
+  },
+  unlockedBadge: {
+    backgroundColor: '#E8F5E9',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
   meta: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   price: {
     fontSize: 20,
@@ -132,10 +170,47 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginBottom: 12,
   },
+  timerContainer: {
+    backgroundColor: '#FFF3E0',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 12,
+  },
+  unlockedContainer: {
+    backgroundColor: '#E8F5E9',
+  },
+  progressBackground: {
+    height: 6,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 3,
+    marginBottom: 8,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#FF5722',
+    borderRadius: 3,
+  },
+  progressFillComplete: {
+    backgroundColor: '#4CAF50',
+  },
+  timerText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FF6F00',
+    textAlign: 'center',
+  },
+  unlockedText: {
+    color: '#2E7D32',
+  },
+  percentageText: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 4,
+  },
   actions: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 12,
   },
   buyButton: {
     flex: 1,
@@ -145,7 +220,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buyButtonLocked: {
-    backgroundColor: '#ccc',
+    backgroundColor: '#CCCCCC',
   },
   buyText: {
     color: '#fff',
