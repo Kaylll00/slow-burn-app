@@ -1,8 +1,7 @@
-// src/app/(tabs)/dashboard.jsx
 import { useEffect, useState } from 'react'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
+import AnimatedCounter from '../../components/dashboard/AnimatedCounter'
 import ImpulseScore from '../../components/dashboard/ImpulseScore'
-import SavingsCounter from '../../components/dashboard/SavingsCounter'
 import StatCard from '../../components/dashboard/StatCard'
 import { savingsService } from '../../services/savingsService'
 import { useAuthStore } from '../../stores/authStore'
@@ -17,8 +16,10 @@ const DashboardScreen = () => {
   })
 
   useEffect(() => {
-    loadStats()
-  }, [])
+    if (user?.id) {
+      loadStats()
+    }
+  }, [user?.id])
 
   const loadStats = async () => {
     const [totalSaved, weeklySaved, savingsByCategory] =
@@ -36,10 +37,17 @@ const DashboardScreen = () => {
 
       <Text style={styles.heading}>Your Savings 💰</Text>
 
-      {/* Big savings counter */}
-      <SavingsCounter amount={stats.totalSaved} />
+      <View style={styles.heroCard}>
+        <Text style={styles.heroEmoji}>💰</Text>
+        <Text style={styles.heroLabel}>Total Saved</Text>
+        <AnimatedCounter
+          value={stats.totalSaved}
+          duration={1500}
+          style={styles.heroCounter}
+        />
+        <Text style={styles.heroSubtitle}>🔥 You're on fire!</Text>
+      </View>
 
-      {/* Stat cards */}
       <View style={styles.statRow}>
         <StatCard
           label="Saved This Week"
@@ -53,15 +61,17 @@ const DashboardScreen = () => {
         />
       </View>
 
-      {/* Impulse score breakdown */}
       <ImpulseScore score={stats.impulseScore} />
 
-      {/* Category breakdown */}
       <Text style={styles.sectionTitle}>Saved By Category</Text>
       {Object.entries(stats.savingsByCategory).map(([cat, amount]) => (
         <View key={cat} style={styles.categoryRow}>
           <Text style={styles.categoryLabel}>{cat}</Text>
-          <Text style={styles.categoryAmount}>${amount.toFixed(2)}</Text>
+          <AnimatedCounter
+            value={amount}
+            duration={1200}
+            style={styles.categoryAmount}
+          />
         </View>
       ))}
 
@@ -81,6 +91,38 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     color: '#1a1a1a',
   },
+  heroCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  heroEmoji: {
+    fontSize: 48,
+    marginBottom: 8,
+  },
+  heroLabel: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  heroCounter: {
+    fontSize: 42,
+    fontWeight: '800',
+    color: '#4CAF50',
+    marginBottom: 8,
+  },
+  heroSubtitle: {
+    fontSize: 14,
+    color: '#FF5722',
+    fontWeight: '700',
+  },
   statRow: {
     flexDirection: 'row',
     gap: 12,
@@ -96,6 +138,7 @@ const styles = StyleSheet.create({
   categoryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     padding: 12,
     backgroundColor: '#fff',
     borderRadius: 10,

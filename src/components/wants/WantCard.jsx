@@ -1,15 +1,37 @@
 // src/components/wants/WantCard.jsx
-import dayjs from 'dayjs'
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import WantStatusBadge from './WantStatusBadge'
-import WantTimer from './WantTimer'
+import dayjs from 'dayjs';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { haptics } from '../../utils/haptics';
+import WantStatusBadge from './WantStatusBadge';
+import WantTimer from './WantTimer';
+
 
 const WantCard = ({ want, onPress, onBuy, onCure }) => {
   const isUnlocked = dayjs().isAfter(dayjs(want.wait_until))
   const isWaiting = want.status === 'waiting'
 
+  // 👇 NEW: Handler functions with haptics
+  const handleCardPress = () => {
+    haptics.light()  // Light tap when opening card details
+    if (onPress) onPress(want)
+  }
+
+  const handleBuyPress = () => {
+    if (isUnlocked) {
+      haptics.medium()  // Medium tap for a confirmed buy action
+    } else {
+      haptics.warning()  // Warning vibration for trying to buy while locked
+    }
+    onBuy(want)
+  }
+
+  const handleCurePress = () => {
+    haptics.success()  // Success vibration for curing (saving money!)
+    onCure(want)
+  }
+
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress}>
+    <TouchableOpacity style={styles.card} onPress={handleCardPress}>
 
       {/* Header */}
       <View style={styles.header}>
@@ -41,7 +63,7 @@ const WantCard = ({ want, onPress, onBuy, onCure }) => {
               styles.buyButton,
               !isUnlocked && styles.buyButtonLocked
             ]}
-            onPress={() => onBuy(want)}
+            onPress={handleBuyPress}  // 👈 Updated
           >
             <Text style={styles.buyText}>
               {isUnlocked ? '🛒 I Bought It' : '🔒 Still Waiting...'}
@@ -50,7 +72,7 @@ const WantCard = ({ want, onPress, onBuy, onCure }) => {
 
           <TouchableOpacity
             style={styles.cureButton}
-            onPress={() => onCure(want)}
+            onPress={handleCurePress}  // 👈 Updated
           >
             <Text style={styles.cureText}>✅ I'm Cured</Text>
           </TouchableOpacity>
