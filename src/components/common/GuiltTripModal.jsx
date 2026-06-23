@@ -1,17 +1,38 @@
 // src/components/common/GuiltTripModal.jsx
+import { useEffect } from 'react'
 import {
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native'
-import { getGuiltMessage } from '../../utils/guiltMessages'
+import { haptics } from '../../utils/haptics'
+import { getGuiltMessage } from '../../utils/guiltMessage'
 
 const GuiltTripModal = ({ visible, want, impulseScore, onConfirm, onCancel }) => {
+  
+  // 👇 NEW: Trigger warning vibration when modal opens
+  useEffect(() => {
+    if (visible) {
+      haptics.warning()  // Buzz when the guilt modal appears
+    }
+  }, [visible])
+
   if (!want) return null
 
   const message = getGuiltMessage(want.item_name, impulseScore)
+
+  // 👇 NEW: Handler functions with haptics
+  const handleConfirm = () => {
+    haptics.heavy()  // Heavy vibration for impulse buy (you're feeling it!)
+    onConfirm()
+  }
+
+  const handleCancel = () => {
+    haptics.success()  // Success vibration for resisting the impulse 💪
+    onCancel()
+  }
 
   return (
     <Modal visible={visible} transparent animationType="slide">
@@ -35,7 +56,7 @@ const GuiltTripModal = ({ visible, want, impulseScore, onConfirm, onCancel }) =>
 
           <TouchableOpacity
             style={styles.confirmButton}
-            onPress={onConfirm}
+            onPress={handleConfirm}  // 👈 Updated
           >
             <Text style={styles.confirmText}>
               Yes, I'm buying it anyway 💸
@@ -44,7 +65,7 @@ const GuiltTripModal = ({ visible, want, impulseScore, onConfirm, onCancel }) =>
 
           <TouchableOpacity
             style={styles.cancelButton}
-            onPress={onCancel}
+            onPress={handleCancel}  // 👈 Updated
           >
             <Text style={styles.cancelText}>
               No, I'll keep waiting 💪

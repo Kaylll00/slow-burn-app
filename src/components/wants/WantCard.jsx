@@ -1,93 +1,107 @@
 import dayjs from 'dayjs'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { useCountdown } from '../../hooks/useCountdown'; // Import the hook
-
+import { useCountdown } from '../../hooks/useCountdown'
+import { haptics } from '../../utils/haptics'
 
 const WantCard = ({ want, onPress, onBuy, onCure }) => {
-  // 👇 PUT IT HERE - inside the component, before the return
   const { timeLeft, isUnlocked } = useCountdown(want.wait_until)
-  
-  // Calculate percentage for progress bar
   const totalWait = dayjs(want.wait_until).diff(dayjs(want.created_at))
   const elapsed = dayjs().diff(dayjs(want.created_at))
-  const percentage = Math.min(100, Math.round((elapsed / totalWait) * 100))
+  const percentage =
+    totalWait > 0
+      ? Math.min(100, Math.max(0, Math.round((elapsed / totalWait) * 100)))
+      : 100
+
+  const handleCardPress = () => {
+    haptics.light()
+    if (onPress) onPress(want)
+  }
+
+  const handleBuyPress = () => {
+    if (!isUnlocked) {
+      haptics.warning()
+      return
+    }
+
+    haptics.medium()
+    if (onBuy) onBuy(want)
+  }
+
+  const handleCurePress = () => {
+    haptics.success()
+    if (onCure) onCure(want)
+  }
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress}>
-      
-      {/* Header with name and status */}
+    <TouchableOpacity style={styles.card} onPress={handleCardPress}>
       <View style={styles.header}>
         <Text style={styles.itemName}>{want.item_name}</Text>
-        <View style={[
-          styles.statusBadge, 
-          isUnlocked ? styles.unlockedBadge : styles.waitingBadge
-        ]}>
+        <View
+          style={[
+            styles.statusBadge,
+            isUnlocked ? styles.unlockedBadge : styles.waitingBadge,
+          ]}
+        >
           <Text style={styles.statusText}>
-            {isUnlocked ? '🟢 Unlocked' : '🟡 Waiting'}
+            {isUnlocked ? 'Unlocked' : 'Waiting'}
           </Text>
         </View>
       </View>
 
-      {/* Price and category */}
       <View style={styles.meta}>
-        <Text style={styles.price}>${want.price.toFixed(2)}</Text>
+        <Text style={styles.price}>${Number(want.price || 0).toFixed(2)}</Text>
         <Text style={styles.category}>{want.category}</Text>
       </View>
 
-      {/* The Countdown Section - REPLACE your old timer with this */}
-      <View style={[
-        styles.timerContainer,
-        isUnlocked && styles.unlockedContainer
-      ]}>
-        
-        {/* Progress Bar */}
+      {want.reason_i_want_it && (
+        <Text style={styles.reason}>"{want.reason_i_want_it}"</Text>
+      )}
+
+      <View
+        style={[
+          styles.timerContainer,
+          isUnlocked && styles.unlockedContainer,
+        ]}
+      >
         <View style={styles.progressBackground}>
-          <View style={[
-            styles.progressFill,
-            { width: `${percentage}%` },
-            isUnlocked && styles.progressFillComplete
-          ]} />
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${percentage}%` },
+              isUnlocked && styles.progressFillComplete,
+            ]}
+          />
         </View>
 
-        {/* 👇 THIS IS WHERE THE SNIPPET GOES IN THE JSX */}
-        <Text style={[
-          styles.timerText,
-          isUnlocked && styles.unlockedText
-        ]}>
-          {isUnlocked 
-            ? '🔓 Unlocked! Decide now.' 
-            : `${timeLeft?.days || 0}d ${timeLeft?.hours || 0}h ${timeLeft?.minutes || 0}m ${timeLeft?.seconds || 0}s remaining`
-          }
+        <Text style={[styles.timerText, isUnlocked && styles.unlockedText]}>
+          {isUnlocked
+            ? 'Unlocked! Decide now.'
+            : `${timeLeft?.days || 0}d ${timeLeft?.hours || 0}h ${timeLeft?.minutes || 0}m ${timeLeft?.seconds || 0}s remaining`}
         </Text>
-        
+
         {!isUnlocked && (
           <Text style={styles.percentageText}>{percentage}% complete</Text>
         )}
       </View>
 
-      {/* Action Buttons */}
       <View style={styles.actions}>
         <TouchableOpacity
           style={[
             styles.buyButton,
-            !isUnlocked && styles.buyButtonLocked
+            !isUnlocked && styles.buyButtonLocked,
           ]}
-          onPress={() => onBuy(want)}
-          disabled={!isUnlocked}  // Disable if still locked
+          onPress={handleBuyPress}
+          disabled={!isUnlocked}
         >
           <Text style={styles.buyText}>
-            {isUnlocked ? '🛒 Buy It' : '🔒 Locked'}
+            {isUnlocked ? 'Buy It' : 'Locked'}
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.cureButton}
-          onPress={() => onCure(want)}
-        >
-          <Text style={styles.cureText}>✅ I'm Cured</Text>
+        <TouchableOpacity style={styles.cureButton} onPress={handleCurePress}>
+          <Text style={styles.cureText}>I'm Cured</Text>
         </TouchableOpacity>
       </View>
-
     </TouchableOpacity>
   )
 }
@@ -149,6 +163,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
+  },
+  reason: {
+    fontSize: 13,
+    color: '#666',
+    fontStyle: 'italic',
+    marginBottom: 12,
   },
   timerContainer: {
     backgroundColor: '#FFF3E0',
