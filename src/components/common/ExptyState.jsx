@@ -8,6 +8,7 @@ export default function EmptyState({ emoji, title, message, actionLabel, onActio
             <Text style = {styles.message}>{message}</Text>
             {actionLabel && (
                 <TouchableOpacity style = {styles.button} onPress={onAction}>
+                    <Text style = {styles.buttonText}>{actionLabel}</Text>
                 </TouchableOpacity>
             )}
         </View>
@@ -22,8 +23,8 @@ const styles = StyleSheet.create({
         padding: 32,
     },
     emoji: {fontSize: 64, marginBottom: 16},
-    title: {fotnSize: 20, fontWeight: '700', marginBottom: 8, color: '#1a1a1a'},
-    message: {fontSize: 14, color: '$666', textAlign: 'center', marginBottom: 24, lineHeight: 20},
+    title: {fontSize: 20, fontWeight: '700', marginBottom: 8, color: '#1a1a1a'},
+    message: {fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 24, lineHeight: 20},
     button: {backgroundColor: '#ffb722', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10},
     buttonText: {color: '#fff', fontWeight: 700},
 })

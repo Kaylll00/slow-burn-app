@@ -1,6 +1,6 @@
 import * as FileSystem from 'expo-file-system'
 import * as Sharing from 'expo-sharing'
-import { supabase } from '../lib/supabase'
+import { supabase } from './supabase'
 
 export const CURRENCIES = [
   { code: 'USD', symbol: '$', name: 'US Dollar' },

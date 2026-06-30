@@ -2,17 +2,17 @@ import dayjs from 'dayjs'
 import { useRouter } from 'expo-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-    ActivityIndicator,
-    Alert,
-    Modal,
-    Platform,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native'
 import Toast from 'react-native-toast-message'
 import ChangePasswordModal from '../../components/profile/ChangePasswordModal'
@@ -22,12 +22,34 @@ import JourneyStats from '../../components/profile/JourneyStats'
 import ProfileHeader from '../../components/profile/ProfileHeader'
 import SettingRow from '../../components/profile/SettingRow'
 import SettingToggle from '../../components/profile/SettingToggle'
-import { supabase } from '../../lib/supabase'
 import * as profileService from '../../services/profileService'
+import { supabase } from '../../services/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import * as haptics from '../../utils/haptics'
 
-const storage = new MMKV()
+// Web-compatible storage adapter
+const createStorageAdapter = () => {
+  if (Platform.OS === 'web') {
+    return {
+      getBoolean: (key) => {
+        if (typeof window !== 'undefined') {
+          const value = window.localStorage.getItem(key)
+          return value === 'true'
+        }
+        return false
+      },
+      set: (key, value) => {
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(key, value.toString())
+        }
+      },
+    }
+  }
+  const { MMKV } = require('react-native-mmkv')
+  return new MMKV()
+}
+
+const storage = createStorageAdapter()
 const NOTIFICATIONS_KEY = 'notifications_enabled'
 const LAST_EXPORT_KEY = 'last_export_date'
 
